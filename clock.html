@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Digital Clock</title>
+    <style>
+        :root {
+            --primary: #08f;
+            --secondary: #0af;
+            --bg-gradient: linear-gradient(135deg, #111, #222);
+            --text-glow: 0 0 10px var(--primary), 0 0 20px rgba(0, 136, 255, 0.5);
+            --card-bg: rgba(15, 15, 20, 0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: var(--bg-gradient);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 500px;
+            padding: 2rem;
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+        }
+
+        .mode-toggle {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+
+        .toggle-btn {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn.active {
+            background: var(--primary);
+            box-shadow: var(--text-glow);
+        }
+
+        .toggle-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .display {
+            text-align: center;
+            margin: 1.5rem 0;
+        }
+
+        .time {
+            font-size: 4rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: var(--text-glow);
+            margin-bottom: 0.5rem;
+            line-height: 1;
+        }
+
+        .date {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .stopwatch-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .control-btn {
+            padding: 0.5rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: var(--primary);
+            box-shadow: var(--text-glow);
+        }
+
+        .controls-disabled {
+            display: none;
+        }
+
+        .laps {
+            margin-top: 1.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .lap-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        footer {
+            margin-top: 2rem;
+            text-align: center;
+            opacity: 0.6;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 500px) {
+            .time {
+                font-size: 3rem;
+            }
+            .container {
+                width: 95%;
+                padding: 1.5rem;
+            }
+        }
+
+        /* Animation for digital effect */
+        @keyframes digitChange {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .digit-change {
+            animation: digitChange 0.3s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="mode-toggle">
+            <button class="toggle-btn active" id="clock-btn">Clock</button>
+            <button class="toggle-btn" id="stopwatch-btn">Stopwatch</button>
+        </div>
+
+        <div class="display" id="clock-display">
+            <div class="time" id="time"></div>
+            <div class="date" id="date"></div>
+        </div>
+
+        <div class="display controls-disabled" id="stopwatch-display">
+            <div class="time" id="stopwatch-time">00:00:00.00</div>
+            <div class="stopwatch-controls">
+                <button class="control-btn" id="start-stopwatch">Start</button>
+                <button class="control-btn" id="lap-stopwatch" disabled>Lap</button>
+                <button class="control-btn" id="reset-stopwatch" disabled>Reset</button>
+            </div>
+            <div class="laps" id="laps-container"></div>
+        </div>
+    </div>
+
+    <footer>
+        Advanced Digital Clock & Stopwatch
+    </footer>
+
+    <script>
+        // DOM Elements
+        const clockDisplay = document.getElementById('clock-display');
+        const stopwatchDisplay = document.getElementById('stopwatch-display');
+        const clockBtn = document.getElementById('clock-btn');
+        const stopwatchBtn = document.getElementById('stopwatch-btn');
+        
+        // Clock elements
+        const timeElement = document.getElementById('time');
+        const dateElement = document.getElementById('date');
+        
+        // Stopwatch elements
+        const stopwatchTime = document.getElementById('stopwatch-time');
+        const startBtn = document.getElementById('start-stopwatch');
+        const lapBtn = document.getElementById('lap-stopwatch');
+        const resetBtn = document.getElementById('reset-stopwatch');
+        const lapsContainer = document.getElementById('laps-container');
+
+        // Clock variables
+        let clockInterval;
+        
+        // Stopwatch variables
+        let stopwatchInterval;
+        let startTime = 0;
+        let elapsedTime = 0;
+        let currentTime = 0;
+        let paused = true;
+        let laps = [];
+
+        // Toggle between clock and stopwatch
+        function toggleDisplay(showClock) {
+            if (showClock) {
+                clockDisplay.classList.remove('controls-disabled');
+                stopwatchDisplay.classList.add('controls-disabled');
+                clockBtn.classList.add('active');
+                stopwatchBtn.classList.remove('active');
+                startClock();
+                stopStopwatch();
+            } else {
+                clockDisplay.classList.add('controls-disabled');
+                stopwatchDisplay.classList.remove('controls-disabled');
+                clockBtn.classList.remove('active');
+                stopwatchBtn.classList.add('active');
+                stopClock();
+            }
+        }
+
+        // Format time with leading zero
+        function formatTime(time) {
+            return time < 10 ? `0${time}` : time;
+        }
+
+        // Update clock display
+        function updateClock() {
+            const now = new Date();
+            
+            // Format time (12-hour with AM/PM)
+            let hours = now.getHours();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            const minutes = formatTime(now.getMinutes());
+            const seconds = formatTime(now.getSeconds());
+            
+            // Format date
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            
+            const dayName = days[now.getDay()];
+            const month = months[now.getMonth()];
+            const date = now.getDate();
+            const year = now.getFullYear();
+            
+            // Apply animation to digits that changed
+            const currentTimeString = `${hours}:${minutes}:${seconds}`;
+            if (timeElement.dataset.lastTime !== currentTimeString) {
+                timeElement.classList.add('digit-change');
+                setTimeout(() => {
+                    timeElement.classList.remove('digit-change');
+                }, 300);
+            }
+            
+            // Update display
+            timeElement.textContent = currentTimeString;
+            timeElement.dataset.lastTime = currentTimeString;
+            dateElement.textContent = `${dayName}, ${month} ${date}, ${year} ${ampm}`;
+        }
+
+        // Start clock
+        function startClock() {
+            updateClock();
+            clockInterval = setInterval(updateClock, 1000);
+        }
+
+        // Stop clock
+        function stopClock() {
+            clearInterval(clockInterval);
+        }
+
+        // Start/Pause stopwatch
+        function toggleStopwatch() {
+            if (paused) {
+                paused = false;
+                startTime = Date.now() - elapsedTime;
+                stopwatchInterval = setInterval(updateStopwatch, 10);
+                startBtn.textContent = 'Pause';
+                lapBtn.disabled = false;
+                resetBtn.disabled = false;
+            } else {
+                paused = true;
+                elapsedTime = Date.now() - startTime;
+                clearInterval(stopwatchInterval);
+                startBtn.textContent = 'Resume';
+            }
+        }
+
+        // Reset stopwatch
+        function resetStopwatch() {
+            paused = true;
+            clearInterval(stopwatchInterval);
+            startTime = 0;
+            elapsedTime = 0;
+            currentTime = 0;
+            stopwatchTime.textContent = '00:00:00.00';
+            startBtn.textContent = 'Start';
+            lapBtn.disabled = true;
+            resetBtn.disabled = true;
+            laps = [];
+            lapsContainer.innerHTML = '';
+        }
+
+        // Add lap
+        function addLap() {
+            const lapTime = stopwatchTime.textContent;
+            laps.push(lapTime);
+            
+            const lapItem = document.createElement('div');
+            lapItem.className = 'lap-item';
+            lapItem.innerHTML = `
+                <span>Lap ${laps.length}</span>
+                <span>${lapTime}</span>
+            `;
+            lapsContainer.prepend(lapItem);
+        }
+
+        // Update stopwatch display
+        function updateStopwatch() {
+            elapsedTime = Date.now() - startTime;
+            
+            let milliseconds = Math.floor(elapsedTime % 1000 / 10);
+            let seconds = Math.floor(elapsedTime / 1000 % 60);
+            let minutes = Math.floor(elapsedTime / (1000 * 60) % 60);
+            let hours = Math.floor(elapsedTime / (1000 * 60 * 60));
+            
+            seconds = formatTime(seconds);
+            minutes = formatTime(minutes);
+            hours = formatTime(hours);
+            milliseconds = formatTime(milliseconds);
+            
+            stopwatchTime.textContent = `${hours}:${minutes}:${seconds}.${milliseconds}`;
+            currentTime = elapsedTime;
+        }
+
+        // Event Listeners
+        clockBtn.addEventListener('click', () => toggleDisplay(true));
+        stopwatchBtn.addEventListener('click', () => toggleDisplay(false));
+        startBtn.addEventListener('click', toggleStopwatch);
+        lapBtn.addEventListener('click', addLap);
+        resetBtn.addEventListener('click', resetStopwatch);
+
+        // Initialize
+        toggleDisplay(true);
+    </script>
+</body>
+</html>
+
